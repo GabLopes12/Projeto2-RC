@@ -10,14 +10,8 @@ class NetworkSimulator:
         self.node_interfaces_and_subnets = {} # Mapeia roteadores para suas interfaces e as sub-redes às quais pertencem
 
     def load_network_configuration(self):
-        """
-        Etapa 2: Importe/defina a configuração da rede.
-        Aqui self.graph, self.routing_tables e self.ip_to_node_map são populados
-        com base na Tabela 1 fornecida e expansão das interfaces.
-        """
-        print("Carregando configuração da rede...")
 
-        # 1. Adicionar nós (dispositivos) ao grafo
+        # Adicionar nós (dispositivos) ao grafo
         # Definindo o tipo para cada nó
         self.graph.add_node('Core', type='router')
         self.graph.add_node('a1', type='router')
@@ -35,7 +29,7 @@ class NetworkSimulator:
         self.graph.add_node('host7', type='host')
         self.graph.add_node('host8', type='host')
 
-        # 2. Adicionar arestas (conexões) ao grafo
+        # Adicionar arestas (conexões) ao grafo
         # Você pode adicionar atributos como 'weight' (custo/distância), 'capacity', 'type' (fibra, par trançado)
         self.graph.add_edge('Core', 'a1', capacity='10Gbps', type='fibra_optica')
         self.graph.add_edge('Core', 'a2', capacity='10Gbps', type='fibra_optica')
@@ -53,7 +47,7 @@ class NetworkSimulator:
         self.graph.add_edge('e4', 'host8', capacity='1Gbps', type='par_trancado_CAT6')
 
 
-        # 3. Mapear IPs para nomes dos nós (incluindo todas as interfaces dos roteadores)
+        # Mapear IPs para nomes dos nós (incluindo todas as interfaces dos roteadores)
         # IPs de hosts e gateways de borda (diretamente da sua Tabela 1)
         self.ip_to_node_map['192.168.0.1'] = 'host1'
         self.ip_to_node_map['192.168.0.2'] = 'host2'
@@ -88,7 +82,7 @@ class NetworkSimulator:
         self.ip_to_node_map['192.168.0.141'] = 'a2'
         self.ip_to_node_map['192.168.0.142'] = 'e4'
 
-        print(f"Mapeamento IP-Nó: {self.ip_to_node_map}")
+      #  print(f"Mapeamento IP-Nó: {self.ip_to_node_map}")
 
         # Populate self.node_interfaces_and_subnets
         # Isso mapeia cada roteador às suas interfaces e às sub-redes às quais pertencem.
@@ -126,11 +120,6 @@ class NetworkSimulator:
             }
         }
         # Hosts não precisam de entries aqui, pois sua lógica de roteamento é apenas usar o gateway.
-
-
-        # 4. Carregar as tabelas de roteamento para cada roteador
-        # Cada entrada da tabela de roteamento é um dicionário:
-        # {'destination_network': 'rede/mascara', 'next_hop': 'IP_do_proximo_salto'}
 
         # Tabela de Roteamento: Core
         # O Core precisa conhecer todas as sub-redes de hosts (via a1 e a2)
@@ -192,17 +181,6 @@ class NetworkSimulator:
             'host8': '192.168.0.99', # Gateway e4
         }
 
-        print("Tabelas de roteamento e mapeamento IP-Nó carregados.")
-        
-        # --- Prints de Diagnóstico na Inicialização ---
-        print("\n--- Diagnóstico da Configuração Carregada ---")
-        print(f" Interfaces e Sub-redes do e1: {self.node_interfaces_and_subnets.get('e1')}")
-        print(f" Tabelas de Roteamento do e1: {self.routing_tables.get('e1')}")
-        print(f" Interfaces e Sub-redes do a1: {self.node_interfaces_and_subnets.get('a1')}")
-        print(f" Tabelas de Roteamento do a1: {self.routing_tables.get('a1')}")
-        print(f" Tabelas de Roteamento do Core: {self.routing_tables.get('Core')}")
-        print("-------------------------------------------\n")
-
 
     def get_node_by_ip(self, ip_address):
         """Retorna o nome do nó dado um endereço IP."""
@@ -214,33 +192,25 @@ class NetworkSimulator:
         Retorna o IP do próximo salto ou None se o destino for inalcançável.
         """
         destination_ip = ipaddress.ip_address(destination_ip_str)
-        print(f"  [DEBUG] _get_next_hop: Nó atual={current_node_name}, Destino={destination_ip_str}")
 
-        # 1. Se o nó atual for um HOST, ele encaminha para seu gateway padrão
+        # Se o nó atual for um HOST, ele encaminha para seu gateway padrão
         if self.graph.nodes[current_node_name]['type'] == 'host':
             gateway_ip = self.host_gateways.get(current_node_name)
             if gateway_ip:
-                print(f"  [DEBUG] {current_node_name} (Host) encaminha para seu Gateway: {gateway_ip}")
                 return gateway_ip
-            print(f"  [DEBUG] {current_node_name} (Host) sem gateway definido.")
             return None # Host sem gateway
 
-        # 2. Para ROTEADORES: Primeiro, verifica se o destino está em uma rede diretamente conectada
+        # Para ROTEADORES: Primeiro, verifica se o destino está em uma rede diretamente conectada
         if current_node_name in self.node_interfaces_and_subnets:
-            print(f"  [DEBUG] {current_node_name} é um roteador. Verificando redes diretamente conectadas...")
             for interface_ip, connected_subnet in self.node_interfaces_and_subnets[current_node_name].items():
-                print(f"    [DEBUG] Verificando interface {interface_ip} na sub-rede {connected_subnet}")
                 if destination_ip in connected_subnet:
                     # Se o destino estiver em uma sub-rede diretamente conectada,
                     # o próximo salto é o próprio IP de destino.
                     # Isso simula a entrega local (ARP-like) dentro do segmento.
-                    print(f"  [DEBUG] {current_node_name} (Router) Destino {destination_ip_str} na rede diretamente conectada {connected_subnet}. Próximo salto: {destination_ip_str}")
                     return destination_ip_str # Entregar diretamente
         
-        print(f"  [DEBUG] {current_node_name}: Destino {destination_ip_str} NÃO está em uma rede diretamente conectada. Consultando tabela de roteamento...")
-        # 3. Se não estiver diretamente conectado, busca na tabela de roteamento
+        #  Se não estiver diretamente conectado, busca na tabela de roteamento
         if current_node_name not in self.routing_tables:
-            print(f"  [DEBUG] {current_node_name}: Não possui tabela de roteamento.")
             return None # Não tem tabela de roteamento
 
         best_match_next_hop = None
@@ -248,33 +218,23 @@ class NetworkSimulator:
 
         for entry in self.routing_tables[current_node_name]:
             dest_net = ipaddress.ip_network(entry['destination_network'])
-            print(f"    [DEBUG] {current_node_name}: Avaliando rota para {dest_net} (pref: {dest_net.prefixlen}) via {entry['next_hop']}")
             if destination_ip in dest_net:
                 if dest_net.prefixlen > longest_prefix_length:
                     longest_prefix_length = dest_net.prefixlen
                     best_match_next_hop = entry['next_hop']
-                    print(f"      [DEBUG] {current_node_name}: Melhor match atualizado para {dest_net} via {best_match_next_hop} (pref: {longest_prefix_length})")
         
         if best_match_next_hop:
-            print(f"  [DEBUG] {current_node_name}: Rota encontrada via match mais específico. Próximo salto: {best_match_next_hop}")
             return best_match_next_hop
         else:
             # Se não houver correspondência específica, tenta a rota padrão (0.0.0.0/0)
-            print(f"  [DEBUG] {current_node_name}: Nenhuma rota específica encontrada. Tentando rota padrão...")
             for entry in self.routing_tables[current_node_name]:
                 if entry['destination_network'] == '0.0.0.0/0':
-                    print(f"  [DEBUG] {current_node_name}: Rota padrão encontrada. Próximo salto: {entry['next_hop']}")
                     return entry['next_hop']
         
-        print(f"  [DEBUG] {current_node_name}: Nenhuma rota encontrada para {destination_ip_str}.")
         return None # Não encontrou rota
 
     def xping(self, source_ip, destination_ip):
-        """
-        Simula o comando Ping.
-        Etapa 4: Faça xping no servidor/host remoto usando o comando Ping.
-        Etapa 5: As estatísticas de pacotes do servidor xping são exibidas.
-        """
+        
         print(f"\n--- Executando xping de {source_ip} para {destination_ip} ---")
         source_node_name = self.get_node_by_ip(source_ip)
         destination_node_name = self.get_node_by_ip(destination_ip)
@@ -294,12 +254,10 @@ class NetworkSimulator:
         ttl = 30 # Time To Live (TTL) - limite de saltos para evitar loops infinitos
 
         while current_node_name != destination_node_name and ttl > 0:
-            print(f"\n[DEBUG] Saltando de {current_node_name} (TTL: {ttl})")
             next_hop_ip = self._get_next_hop(current_node_name, destination_ip)
             
             if not next_hop_ip:
                 print(f"Destino inalcançável: Nenhuma rota encontrada de {current_node_name} para {destination_ip}.")
-                print("Pacotes enviados: 4, Recebidos: 0, Perda: 100%")
                 return
             
             # Descobre qual o nó correspondente ao next_hop_ip
@@ -308,10 +266,8 @@ class NetworkSimulator:
                 # Este caso pode ocorrer se o next_hop_ip for o próprio destino_ip (entrega direta)
                 if next_hop_ip == destination_ip:
                     next_node_name = destination_node_name # O próximo "nó" é o próprio destino final
-                    print(f"[DEBUG] Próximo nó identificado como o destino final: {next_node_name}")
                 else:
                     print(f"Erro: Próximo salto '{next_hop_ip}' não mapeado para um nó conhecido.")
-                    print("Pacotes enviados: 4, Recebidos: 0, Perda: 100%")
                     return
             
             # Verifica se o link entre current_node_name e next_node_name existe no grafo
@@ -320,7 +276,6 @@ class NetworkSimulator:
             # se já estamos na sub-rede final.
             if next_node_name != destination_node_name and not self.graph.has_edge(current_node_name, next_node_name):
                  print(f"Erro: Link físico ausente entre {current_node_name} e {next_node_name}. Roteamento incorreto ou falha de conectividade física.")
-                 print("Pacotes enviados: 4, Recebidos: 0, Perda: 100%")
                  return
 
             current_node_name = next_node_name
@@ -330,18 +285,11 @@ class NetworkSimulator:
         if current_node_name == destination_node_name:
             print(f"\nSucesso! Ping de {source_ip} para {destination_ip} bem-sucedido.")
             print(f"Caminho percorrido: {' -> '.join(path)}")
-            print("Pacotes enviados: 4, Recebidos: 4, Perda: 0%")
-            print("Tempo: Mínimo = Xms, Máximo = Yms, Média = Zms (simule tempos se necessário)")
         else:
             print(f"\nFalha! Destino não alcançado após {30 - ttl} saltos (TTL Expirado).")
-            print("Pacotes enviados: 4, Recebidos: 0, Perda: 100%")
 
     def xtraceroute(self, source_ip, destination_ip):
-        """
-        Simula o comando Traceroute.
-        Etapa 4: Mostre a rota para o servidor/host remoto usando o comando xtraceroute.
-        Etapa 5: As estatísticas de comando xtraceroute são exibidas.
-        """
+
         print(f"\n--- Executando xtraceroute de {source_ip} para {destination_ip} ---")
         source_node_name = self.get_node_by_ip(source_ip)
         destination_node_name = self.get_node_by_ip(destination_ip)
@@ -360,7 +308,6 @@ class NetworkSimulator:
         ttl = 30 # Time To Live (TTL) para o traceroute
 
         while current_node_name != destination_node_name and ttl > 0:
-            print(f"\n[DEBUG] Saltando de {current_node_name} (TTL: {ttl})")
             hops.append(current_node_name) # Adiciona o nó atual como um salto
 
             next_hop_ip = self._get_next_hop(current_node_name, destination_ip)
@@ -373,7 +320,6 @@ class NetworkSimulator:
                 # Caso de entrega direta para um host (next_hop_ip é o destino_ip)
                 if next_hop_ip == destination_ip:
                     next_node_name = destination_node_name
-                    print(f"[DEBUG] Próximo nó identificado como o destino final: {next_node_name}")
                 else:
                     hops.append(f"Próximo Salto Desconhecido ({next_hop_ip})")
                     break
